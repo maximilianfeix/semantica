@@ -22,7 +22,7 @@ Example Usage:
     >>> from semantica.vector_store import HybridSearch, MetadataFilter
     >>> search = HybridSearch()
     >>> filter = MetadataFilter().eq("category", "science").gt("year", 2020)
-    >>> results = search.search(query_vector, vectors, metadata, vector_ids, filter=filter, k=10)
+    >>> results = search.search(query_vector, vectors, metadata, vector_ids, metadata_filter=filter, k=10)
     >>> 
     >>> from semantica.vector_store import SearchRanker
     >>> ranker = SearchRanker(strategy="reciprocal_rank_fusion")
@@ -35,6 +35,7 @@ Author: Semantica Contributors
 License: MIT
 """
 
+import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -305,6 +306,22 @@ class HybridSearch:
         # that and raises "got multiple values for keyword argument".
         if "top_k" in options:
             k = options.pop("top_k")
+        # filter= is what the docs used to show. It went into **options and
+        # the search silently ran unfiltered, so accept it as an alias.
+        if "filter" in options:
+            legacy_filter = options.pop("filter")
+            if legacy_filter is not None and metadata_filter is not None:
+                raise TypeError(
+                    "HybridSearch.search() got both 'filter' and 'metadata_filter'; "
+                    "pass metadata_filter only"
+                )
+            if legacy_filter is not None:
+                warnings.warn(
+                    "HybridSearch.search(filter=...) is deprecated, use metadata_filter=...",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                metadata_filter = legacy_filter
         # query_vector is derived from `query` above; drop any stray value
         # passed in **options so it doesn't collide with that derivation.
         # (**options is a fresh dict per call, so this can't affect the caller.)

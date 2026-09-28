@@ -87,7 +87,7 @@ Example Usage:
     >>> from semantica.vector_store.methods import store_vectors, search_vectors, hybrid_search
     >>> vector_ids = store_vectors(vectors, metadata=metadata_list, method="default")
     >>> results = search_vectors(query_vector, vectors, vector_ids, k=10, method="default")
-    >>> hybrid_results = hybrid_search(query_vector, vectors, metadata, vector_ids, filter=filter, method="default")
+    >>> hybrid_results = hybrid_search(query_vector, vectors, metadata, vector_ids, metadata_filter=filter, method="default")
 """
 
 from typing import Any, Dict, List, Optional, Union
