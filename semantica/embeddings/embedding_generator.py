@@ -68,7 +68,7 @@ class EmbeddingGenerator:
         self.logger = get_logger("embedding_generator")
 
         # Merge configuration
-        self.config = config or {}
+        self.config = dict(config or {})
         self.config.update(kwargs)
 
         # Initialize embedders for different data types

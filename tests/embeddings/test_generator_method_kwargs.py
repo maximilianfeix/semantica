@@ -51,6 +51,11 @@ class TestGeneratorMethodKwargs(unittest.TestCase):
         EmbeddingGenerator(method="sentence_transformers", text=text)
         self.assertEqual(text, {"model_name": "fast-model"})
 
+    def test_caller_top_level_config_is_not_mutated(self):
+        config = {"text": {"model_name": "fast-model"}}
+        EmbeddingGenerator(config=config, method="sentence_transformers")
+        self.assertEqual(config, {"text": {"model_name": "fast-model"}})
+
 
 if __name__ == "__main__":
     unittest.main()
