@@ -5,7 +5,7 @@ import warnings
 
 import numpy as np
 
-from semantica.vector_store.hybrid_search import HybridSearch, MetadataFilter
+from semantica.vector_store.hybrid_search import HybridSearch, MetadataFilter, pop_legacy_filter
 from semantica.vector_store.methods import hybrid_search
 
 
@@ -84,6 +84,27 @@ class TestHybridSearchFilterKwarg(unittest.TestCase):
                 self.query, self.vectors, self.metadata, self.ids, k=3, filter=self.wiki
             )
         self.assertEqual(self._ids(results), ["a", "c"])
+
+
+    def test_warning_points_at_the_callers_line(self):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            HybridSearch().search(self.query, self.vectors, self.metadata, self.ids, k=3, filter=self.wiki)
+            hybrid_search(self.query, self.vectors, self.metadata, self.ids, k=3, filter=self.wiki)
+        deprecations = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+        # one warning per call, both naming this file rather than library code
+        self.assertEqual(len(deprecations), 2)
+        self.assertEqual({w.filename for w in deprecations}, {__file__})
+
+    def test_a_dict_filter_is_left_for_the_backend(self):
+        # a plain dict is a backend-native filter (e.g. Pinecone): it keeps going
+        # through **options to search_vectors, as before
+        options = {"filter": {"source": "wiki"}}
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            self.assertIsNone(pop_legacy_filter(options, None))
+        self.assertEqual(options, {"filter": {"source": "wiki"}})
+        self.assertEqual(caught, [])
 
 
 if __name__ == "__main__":
