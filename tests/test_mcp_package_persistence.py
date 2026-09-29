@@ -355,6 +355,37 @@ class TestLinkDecisionsPersistence(unittest.TestCase):
         finally:
             os.unlink(path)
 
+    def test_failed_save_keeps_another_callers_link(self):
+        from semantica_mcp.mcp.tools.decisions import handle_link_decisions
+
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            path = f.name
+        try:
+            with _IsolatedSession():
+                with patch.dict(os.environ, {"SEMANTICA_KG_PATH": path}):
+                    a, b = self._record("A"), self._record("B")
+                    c, d = self._record("C"), self._record("D")
+                    graph = _session.get_graph()
+
+                    def other_caller_links_then_save_fails(*_args, **_kwargs):
+                        # another link lands after this call's edge, then the save fails
+                        graph.add_causal_relationship(c, d, "CAUSED")
+                        raise OSError("disk full")
+
+                    with patch.object(
+                        type(graph), "save_to_file",
+                        side_effect=other_caller_links_then_save_fails,
+                    ):
+                        result = handle_link_decisions(
+                            {"source": a, "target": b, "relationship": "CAUSED"}
+                        )
+                    self.assertIn("rolled back", result.get("error", ""))
+                    pairs = {(e.source_id, e.target_id) for e in graph.edges}
+                    self.assertNotIn((a, b), pairs)
+                    self.assertIn((c, d), pairs)
+        finally:
+            os.unlink(path)
+
     def test_no_kg_path_links_without_persisting(self):
         from semantica_mcp.mcp.tools.decisions import handle_link_decisions
 
